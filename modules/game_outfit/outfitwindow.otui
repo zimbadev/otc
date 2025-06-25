@@ -1,0 +1,7 @@
+FloorTile < UIWidget
+  image-source: /images/ui/outfits/floor
+  size: 32 32
+  phantom: true
+
+OutfitWindow
+

@@ -1,0 +1,234 @@
+Item < UIItem
+  size: 34 34
+  padding: 1
+  image-source: /images/ui/item
+  font: verdana-11px-rounded
+  border-color: white
+  color: white
+
+  $disabled:
+    color: #646464
+
+  Label
+    id: duration
+    anchors.bottom: parent.bottom
+    anchors.left: parent.left
+    phantom: true
+    font: "verdana-11px-rounded"
+
+  Label
+    id: charges
+    anchors.top: parent.top
+    anchors.left: parent.left
+    phantom: true
+    text-auto-resize: true
+    font: "verdana-11px-rounded"
+
+  UIWidget
+    id: tier
+    size: 10 9
+    image-source: /images/inventory/tiers-strip
+    image-clip: 0 0 10 9
+    image-size: 10 9
+    anchors.top: parent.top
+    anchors.right: parent.right
+    phantom: true
+    focusable: false
+    visible: false
+    image-smooth: true
+    
+MainInventoryItem < UIWidget
+  image-source: /images/inventory/containerslot
+  image-border: 3
+  phantom: false
+  size: 34 34
+
+  UIWidget
+    id: backpack
+    image-source: /images/inventory/inventory_back
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: boots
+    image-source: /images/inventory/inventory_feet
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: ring
+    image-source: /images/inventory/inventory_finger
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: helmet
+    image-source: /images/inventory/inventory_head
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: tools
+    image-source: /images/inventory/inventory_hip
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: sword
+    image-source: /images/inventory/inventory_left_hand
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: legs
+    image-source: /images/inventory/inventory_legs
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: amulet
+    image-source: /images/inventory/inventory_neck
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: shield
+    image-source: /images/inventory/inventory_right_hand
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: armor
+    image-source: /images/inventory/inventory_torso
+    anchors.centerIn: parent
+    phantom: true
+    enabled: false
+    size: 32 32
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIWidget
+    id: golden
+    image-source: /images/inventory/containerslot_goldenborder
+    image-border: 3
+    anchors.fill: parent
+    phantom: true
+    enabled: false
+
+    $disabled:
+      opacity: 0
+
+    $!disabled:
+      opacity: 1
+
+  UIItem
+    id: item
+    anchors.centerIn: parent
+    size: 34 34
+    padding: 1
+    font: verdana-11px-rounded
+    border-color: white
+    color: white
+	
+    Label
+      id: duration
+      anchors.bottom: parent.bottom
+      anchors.left: parent.left
+      phantom: true
+    Label
+      id: charges
+      anchors.top: parent.top
+      anchors.left: parent.left
+      phantom: true
+      text-auto-resize: true
+      font: "verdana-11px-rounded"
+
+    UIWidget
+      id: tier
+      size: 10 9
+      image-source: /images/inventory/tiers-strip
+      image-clip: 0 0 10 9
+      image-size: 10 9
+      anchors.top: parent.top
+      anchors.right: parent.right
+      phantom: true
+      focusable: false
+      visible: false
+      image-smooth: true
+      

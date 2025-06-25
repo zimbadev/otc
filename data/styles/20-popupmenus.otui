@@ -1,0 +1,89 @@
+PopupMenuButton < UIButton
+  height: 18
+  size: 0 21
+  text-offset: 4 0
+  text-align: left
+  font: verdana-11px-rounded
+  color: white
+  background-color: alpha
+
+  $hover !disabled:
+    background-color: #ffffff36
+    image-clip: 0 40 20 20
+
+  $disabled:
+    color: #c0c0c0ff
+
+PopupMenuShortcutLabel < Label
+  font: verdana-11px-antialised
+  text-align: right
+  anchors.fill: parent
+  margin-right: 2
+  margin-left: 5
+
+PopupMenuSeparator < UIWidget
+  margin-left: 3
+  margin-right: 3
+  margin-bottom: 1
+  image-source: /images/ui/horizontal_line_bright
+  height: 1
+  phantom: true
+
+PopupMenu < UIPopupMenu
+  width: 80
+  image-source: /images/ui/3pixel_frame_borderimage
+  image-border: 4
+  padding: 3
+
+PopupScrollMenuButton < UIButton
+  height: 18
+  size: 0 21
+  text-offset: 4 0
+  text-align: left
+  font: verdana-11px-antialised
+
+  color: #aaaaaa
+  background-color: alpha
+
+  $hover !disabled:
+    color: #ffffff
+    background-color: #ffffff44
+    image-clip: 0 40 20 20
+
+  $disabled:
+    color: #555555
+
+PopupScrollMenuShortcutLabel < Label
+  font: verdana-11px-antialised
+  text-align: right
+  anchors.fill: parent
+  margin-right: 2
+  margin-left: 5
+
+PopupScrollMenuSeparator < UIWidget
+  margin-left: 3
+  margin-right: 3
+  margin-bottom: 1
+  image-source: /images/ui/horizontal_line_bright
+  height: 1
+  phantom: true
+
+PopupScrollMenu < UIPopupScrollMenu
+  width: 50
+  image-source: /images/ui/3pixel_frame_borderimage
+  image-border: 4
+  padding: 3
+
+PopupMenuCheckBox < ThickCheckBox
+  text-offset: 18 1
+  text-align: left
+  color: white
+  background-color: alpha
+  font: verdana-11px-rounded
+  padding: 3 6
+
+  $hover:
+    background-color: #ffffff1a
+
+  $disabled:
+    color: #c0c0c0ff

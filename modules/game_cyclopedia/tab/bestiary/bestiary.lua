@@ -34,11 +34,13 @@ function showBestiary()
     controllerCyclopedia.ui.CharmsBase:setVisible(true)
     controllerCyclopedia.ui.GoldBase:setVisible(true)
     controllerCyclopedia.ui.BestiaryTrackerButton:setVisible(true)
+    if g_game.getClientVersion() >= 1410 then
+        controllerCyclopedia.ui.CharmsBase1410:hide()
+    end
     g_game.requestBestiary()
 end
 
 Cyclopedia.Bestiary = {}
-Cyclopedia.BestiaryCache = Cyclopedia.BestiaryCache or {}
 Cyclopedia.Bestiary.Stage = STAGES.CATEGORY
 
 function Cyclopedia.SetBestiaryProgress(fit, firstBar, secondBar, thirdBar, killCount, firstGoal, secondGoal, thirdGoal)
@@ -135,8 +137,6 @@ function Cyclopedia.CreateCreatureItems(data)
 end
 
 function Cyclopedia.loadBestiarySelectedCreature(data)
-    Cyclopedia.BestiaryCache[data.id] = data
-
     local occurence = {
         [0] = 1,
         2,

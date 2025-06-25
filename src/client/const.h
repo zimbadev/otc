@@ -560,6 +560,7 @@ namespace Otc
         GamePlayerFamiliars = 123,
         GameLatencyAdaptiveCamera = 124,
         GameMapCache = 125,
+        GameForgeSkillStats = 126,
         LastGameFeature
     };
 
@@ -673,10 +674,10 @@ namespace Otc
         RESOURCE_PREY_WILDCARDS = 10,
         RESOURCE_DAILYREWARD_STREAK = 20,
         RESOURCE_DAILYREWARD_JOKERS = 21,
-        RESOURCE_CHARM = 30, // 0x1E
-        RESOURCE_MINOR_CHARM = 31, // 0x1F
-        RESOURCE_MAX_CHARM = 32, // 0x20
-        RESOURCE_MAX_MINOR_CHARM = 33, // 0x21
+        RESOURCE_CHARM = 30,
+        RESOURCE_MINOR_CHARM = 31,
+        RESOURCE_MAX_CHARM = 32,
+        RESOURCE_MAX_MINOR_CHARM = 33,
         RESOURCE_TASK_HUNTING = 50,
         RESOURCE_FORGE_DUST = 70,
         RESOURCE_FORGE_SLIVER = 71,
@@ -689,6 +690,15 @@ namespace Otc
         RESOURE_COIN_TRANSFERRABLE = 91,
         RESOURE_COIN_AUCTION = 92,
         RESOURE_COIN_TOURNAMENT = 93,
+    };
+
+    enum ExperienceRate_t : uint8_t
+    {
+        EXP_BASE = 0,
+        EXP_VOUCHER = 1,
+        EXP_LOWLEVEL = 2,
+        EXP_XPBOOST = 3,
+        EXP_STANINAMULTIPLIER = 4
     };
 
     enum MarketItemDescription : uint8_t
@@ -716,9 +726,12 @@ namespace Otc
         ITEM_DESC_PERFECT = 21,
         ITEM_DESC_UPGRADECLASS = 22,
         ITEM_DESC_CURRENTTIER = 23,
+        ITEM_DESC_test1 = 24, // @note: improve name
+        ITEM_DESC_test2 = 25, // @note: improve name
+        ITEM_DESC_test3 = 26, // @note: improve name
 
         ITEM_DESC_FIRST = ITEM_DESC_ARMOR,
-        ITEM_DESC_LAST = ITEM_DESC_CURRENTTIER,
+        ITEM_DESC_LAST = ITEM_DESC_test2, // @note: improve name
     };
 
     enum MarketAction : uint8_t
@@ -787,7 +800,11 @@ namespace Otc
         CYCLOPEDIA_CHARACTERINFO_STORESUMMARY = 8,
         CYCLOPEDIA_CHARACTERINFO_INSPECTION = 9,
         CYCLOPEDIA_CHARACTERINFO_BADGES = 10,
-        CYCLOPEDIA_CHARACTERINFO_TITLES = 11
+        CYCLOPEDIA_CHARACTERINFO_TITLES = 11,
+        CYCLOPEDIA_CHARACTERINFO_WHEEL = 12,
+        CYCLOPEDIA_CHARACTERINFO_OFFENCESTATS = 13,
+        CYCLOPEDIA_CHARACTERINFO_DEFENCESTATS = 14,
+        CYCLOPEDIA_CHARACTERINFO_MISCSTATS = 15
     };
 
     enum InspectObjectTypes : uint8_t

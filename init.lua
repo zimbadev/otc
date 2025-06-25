@@ -13,18 +13,16 @@ Services = {
 Servers_init = {
     ["http://127.0.0.1/login.php"] = {
         ["port"] = 80,
-        ["protocol"] = 1412,
+        ["protocol"] = 1500,
         ["httpLogin"] = true
-    },
-    --[[
-    -- Old protocol format example
+    },--[[
     ["ip.net"] = {
         ["port"] = 7171,
         ["protocol"] = 860,
         ["httpLogin"] = false
-    },
-    ]]
+    },]]
 }
+
 
 g_app.setName("OTClient - Redemption");
 g_app.setCompactName("otclient");

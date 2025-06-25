@@ -437,6 +437,9 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
                 case Proto::GameServerLootContainers:
                     parseLootContainers(msg);
                     break;
+                case Proto::GameServerVirtue: // @note: improve name
+                    parseVirtue(msg); // @note: improve name
+                    break;
                 case Proto::GameServerCyclopediaHouseAuctionMessage:
                     parseCyclopediaHouseAuctionMessage(msg);
                     break;
@@ -744,13 +747,20 @@ void ProtocolGame::parseResourceBalance(const InputMessagePtr& msg) const
 {
     using enum Otc::ResourceTypes_t;
     const auto type = static_cast<Otc::ResourceTypes_t>(msg->getU8());
-    if (type >= RESOURCE_CHARM && type <= RESOURCE_MAX_MINOR_CHARM) {
-        const uint32_t value = msg->getU32();
-        m_localPlayer->setResourceBalance(type, value);
-    } else {
-        const uint64_t value = msg->getU64();
-        m_localPlayer->setResourceBalance(type, value);
+    uint64_t value;
+    switch (type) {
+        case Otc::RESOURCE_CHARM:
+        case Otc::RESOURCE_MINOR_CHARM:
+        case Otc::RESOURCE_MAX_CHARM:
+        case Otc::RESOURCE_MAX_MINOR_CHARM:
+            // 14.10
+            value = msg->getU32();
+            break;
+        default:
+            value = msg->getU64();
+            break;
     }
+    m_localPlayer->setResourceBalance(type, value);
 }
 
 void ProtocolGame::parseWorldTime(const InputMessagePtr& msg)
@@ -2191,15 +2201,21 @@ void ProtocolGame::parsePlayerStats(const InputMessagePtr& msg) const
 
     if (g_game.getFeature(Otc::GameExperienceBonus)) {
         if (g_game.getClientVersion() <= 1096) {
-            msg->getDouble(); // experienceBonus
+            const double experienceBonus = msg->getDouble();
+            m_localPlayer->setExperienceRate(Otc::EXP_BASE, experienceBonus * 100);
         } else {
-            msg->getU16(); // baseXpGain
+            const uint16_t baseXpGain = msg->getU16();
+            m_localPlayer->setExperienceRate(Otc::EXP_BASE, baseXpGain);
             if (g_game.getClientVersion() < 1281) {
-                msg->getU16(); // voucherAddend
+                const uint16_t voucherAddend = msg->getU16();
+                m_localPlayer->setExperienceRate(Otc::EXP_VOUCHER, voucherAddend);
             }
-            msg->getU16(); // grindingAddend
-            msg->getU16(); // storeBoostAddend
-            msg->getU16(); // huntingBoostFactor
+            const uint16_t grindingAddend = msg->getU16();
+            m_localPlayer->setExperienceRate(Otc::EXP_LOWLEVEL, grindingAddend);
+            const uint16_t storeBoostAddend = msg->getU16();
+            m_localPlayer->setExperienceRate(Otc::EXP_XPBOOST, storeBoostAddend);
+            const uint16_t huntingBoostFactor = msg->getU16();
+            m_localPlayer->setExperienceRate(Otc::EXP_STANINAMULTIPLIER, huntingBoostFactor);
         }
     }
 
@@ -2321,40 +2337,61 @@ void ProtocolGame::parsePlayerSkills(const InputMessagePtr& msg) const
         msg->getU32(); // base capacity
         m_localPlayer->setTotalCapacity(capacity);
 
-    } else if (version >= 1412) {
-        const uint32_t capacity = msg->getU32();
+    }
+    
+    if (version >= 1412) {
+        //msg->getU8(); //  GameConcotions ??
+        const uint32_t capacity = msg->getU32(); // base + bonus capacity
         msg->getU32(); // base capacity
         m_localPlayer->setTotalCapacity(capacity);
+        // Flat Damage and Healing Total
+        const uint16_t flatBonus = msg->getU16();
+        m_localPlayer->setFlatDamageHealing(flatBonus);
 
-        msg->getU16(); // flat healing/damage bonus
+        // Weapon attack and element info
+        const uint16_t attackValue = msg->getU16();
+        const uint8_t attackElement = msg->getU8();
+        m_localPlayer->setAttackInfo(attackValue, attackElement);
 
-        msg->getU16(); // attack total
-        msg->getU8(); // element
-        msg->getDouble(); // element ratio
-        msg->getU8(); // element type
+        // Converted Damage
+        const double convertedDamage = msg->getDouble();
+        const uint8_t convertedElement = msg->getU8();
+        m_localPlayer->setConvertedDamage(convertedDamage, convertedElement);
 
-        // Imbuement values
-        msg->getDouble(); // Life Leech
-        msg->getDouble(); // Mana Leech
-        msg->getDouble(); // Crit Chance
-        msg->getDouble(); // Crit Extra Damage
-        msg->getDouble(); // Onslaught
+        // Imbuements
+        const double lifeLeech = msg->getDouble();
+        const double manaLeech = msg->getDouble();
+        const double critChance = msg->getDouble();
+        const double critDamage = msg->getDouble();
+        const double onslaught = msg->getDouble();
+        m_localPlayer->setImbuements(lifeLeech, manaLeech, critChance, critDamage, onslaught);
 
-        msg->getU16(); // Defense
-        msg->getU16(); // Armor
-        msg->getDouble(); // Mitigation
-        msg->getDouble(); // Dodge
-        msg->getU16(); // Reflection
-
-        const uint8_t absorbCount = msg->getU8();
-        for (uint8_t i = 0; i < absorbCount; ++i) {
-            msg->getU8(); // combat type
-            msg->getDouble(); // value
+        // Defense info
+        const uint16_t defense = msg->getU16();
+        const uint16_t armor = msg->getU16();
+        if (g_game.getClientVersion() >= 1500) {
+            msg->getU16(); // getMantraTotal
         }
+        const double mitigation = msg->getDouble();
+        const double dodge = msg->getDouble();
+        const uint16_t damageReflection = msg->getU16();
+        m_localPlayer->setDefenseInfo(defense, armor, mitigation, dodge, damageReflection);
 
-        msg->getDouble(); // Momentum
-        msg->getDouble(); // Transcendence
-        msg->getDouble(); // Amplification
+        // Combat absorb values
+        const uint8_t combatsCount = msg->getU8();
+        std::map<uint8_t, double> absorbValues;
+        for (int i = 0; i < combatsCount; i++) {
+            const uint8_t combatType = msg->getU8();
+            const double value = msg->getDouble();
+            absorbValues[combatType] = value;
+        }
+        m_localPlayer->setCombatAbsorbValues(absorbValues);
+
+        // Forge bonuses
+        const double momentum = msg->getDouble();
+        const double transcendence = msg->getDouble();
+        const double amplification = msg->getDouble();
+        m_localPlayer->setForgeBonuses(momentum, transcendence, amplification);
     }
 }
 
@@ -2829,29 +2866,33 @@ void ProtocolGame::parseQuestTracker(const InputMessagePtr& msg)
         case 1: {
             const uint8_t remainingQuests = msg->getU8();
             const uint8_t missionCount = msg->getU8();
-            std::vector<std::tuple<uint16_t, std::string, uint8_t, std::string, std::string>> missions;
+            std::vector<std::tuple<uint16_t, uint16_t, std::string, std::string, std::string>> missions;
             for (uint8_t i = 0; i < missionCount; ++i) {
+                uint8_t questId = 0;
+                if (g_game.getClientVersion() >= 1410) {
+                    questId = msg->getU16();
+                }
                 const uint16_t missionId = msg->getU16();
                 const std::string& questName = msg->getString();
-                uint8_t questIsCompleted = 0;
-                if (g_game.getClientVersion() >= 1410) {
-                    questIsCompleted = msg->getU8();
-                }
                 const std::string& missionName = msg->getString();
                 const std::string& missionDesc = msg->getString();
-                missions.emplace_back(missionId, questName, questIsCompleted, missionName, missionDesc);
+                missions.emplace_back(questId, missionId, questName, missionName, missionDesc);
             }
             return g_lua.callGlobalField("g_game", "onQuestTracker", remainingQuests, missions);
         }
         case 0: {
-            const uint16_t missionId = msg->getU16();
-            const std::string& missionName = msg->getString();
-            uint8_t questIsCompleted = 0;
+            uint8_t questId = 0;
             if (g_game.getClientVersion() >= 1410) {
-                questIsCompleted = msg->getU8();
+                questId = msg->getU16();
             }
+            const uint16_t missionId = msg->getU16();
+            std::string questName = "";
+            if (g_game.getClientVersion() >= 1410) {
+                questName = msg->getString();
+            }
+            const std::string& missionName = msg->getString();
             const std::string& missionDesc = msg->getString();
-            return g_lua.callGlobalField("g_game", "onUpdateQuestTracker", missionId, missionName, questIsCompleted, missionDesc);
+            return g_lua.callGlobalField("g_game", "onUpdateQuestTracker", questId, missionId, questName, missionName, missionDesc);
         }
     }
 }
@@ -2981,8 +3022,7 @@ void ProtocolGame::parseBestiaryMonsterData(const InputMessagePtr& msg)
     data.bestClass = msg->getString();
     data.currentLevel = msg->getU8();
 
-    auto version = g_game.getClientVersion();
-    if (version >= 1340) {
+    if (g_game.getClientVersion() >= 1340) {
         data.AnimusMasteryBonus = msg->getU16(); // Animus Mastery Bonus
         data.AnimusMasteryPoints = msg->getU16(); // Animus Mastery Points
     } else {
@@ -3034,14 +3074,15 @@ void ProtocolGame::parseBestiaryMonsterData(const InputMessagePtr& msg)
         msg->getU16();
         data.location = msg->getString();
     }
-
-    if (data.currentLevel > 3 && version < 1412) {
-        const bool hasCharm = static_cast<bool>(msg->getU8());
-        if (hasCharm) {
-            msg->getU8();
-            msg->getU32();
-        } else {
-            msg->getU8();
+    if (g_game.getClientVersion() < 1410) {
+        if (data.currentLevel > 3) {
+            const bool hasCharm = static_cast<bool>(msg->getU8());
+            if (hasCharm) {
+                msg->getU8();
+                msg->getU32();
+            } else {
+                msg->getU8();
+            }
         }
     }
 
@@ -3051,89 +3092,68 @@ void ProtocolGame::parseBestiaryMonsterData(const InputMessagePtr& msg)
 void ProtocolGame::parseBestiaryCharmsData(const InputMessagePtr& msg)
 {
     BestiaryCharmsData charmData;
-    auto version = g_game.getClientVersion();
-    if (version >= 1405) {
-        charmData.points = msg->getU64();
 
+    if (g_game.getClientVersion() >= 1410) {
+        charmData.resetAllCharmsCost = msg->getU64();
     } else {
         charmData.points = msg->getU32();
     }
 
-    if (version >= 1412) {
-        const uint8_t charmsAmount = msg->getU8();
-        for (uint8_t i = 0; i < charmsAmount; ++i) {
-            CharmData charm;
-            charm.id = msg->getU8();
-            const uint8_t tier = msg->getU8();
+    const uint8_t charmsAmount = msg->getU8();
+    charmData.charms.reserve(charmsAmount);
 
-            charm.unlockPrice = 0; // not sent anymore
-            charm.unlocked = tier > 0;
-            charm.asignedStatus = false;
-            charm.raceId = 0;
-            charm.removeRuneCost = 0;
-
-            if (tier > 0) {
-                const bool assigned = msg->getU8() == 1;
-                if (assigned) {
-                    charm.asignedStatus = true;
-                    charm.raceId = msg->getU16();
-                    charm.removeRuneCost = msg->getU32();
-                }
-            } else {
-                msg->getU8(); // still reserved
-            }
-
-            // name and description are no longer sent
-            charm.name = fmt::format("Charm {}", charm.id);
-            charm.description = fmt::format("Tier {} charm", tier);
-
-            charmData.charms.emplace_back(charm);
-        }
-
-        // available charm slots (uint8)
-        msg->getU8();
-
-        // finished monsters list (uint16 count + list of uint32 ids)
-        const uint16_t finishedMonstersSize = msg->getU16();
-        for (uint16_t i = 0; i < finishedMonstersSize; ++i) {
-            const auto raceId = static_cast<uint16_t>(msg->getU32());
-            charmData.finishedMonsters.emplace_back(raceId);
-        }
-    } else {
-        const uint8_t charmsAmount = msg->getU8();
-        for (auto i = 0; i < charmsAmount; ++i) {
-            CharmData charm;
-            charm.id = msg->getU8();
+    for (auto i = 0; i < charmsAmount; ++i) {
+        CharmData charm;
+        charm.id = msg->getU8();
+        charm.asignedStatus = false;
+        charm.raceId = 0;
+        charm.removeRuneCost = 0;
+        if (g_game.getClientVersion() >= 1410) {
+            charm.tier = msg->getU8();
+            charm.unlocked = static_cast<bool>(msg->getU8());
+        } else {
             charm.name = msg->getString();
             charm.description = msg->getString();
-            msg->getU8();
+            msg->getU8(); // Unknown byte
             charm.unlockPrice = msg->getU16();
             charm.unlocked = msg->getU8() == 1;
-            charm.asignedStatus = false;
-            charm.raceId = 0;
-            charm.removeRuneCost = 0;
-
-            if (charm.unlocked) {
-                const bool asigned = static_cast<bool>(msg->getU8());
-                if (asigned) {
-                    charm.asignedStatus = asigned;
-                    charm.raceId = msg->getU16();
-                    charm.removeRuneCost = msg->getU32();
-                }
-            } else {
-                msg->getU8();
+            charm.tier = charm.unlocked ? 1 : 0;
+        }
+        if (charm.unlocked) {
+            bool asigned = true;
+            if (g_game.getClientVersion() < 1410) {
+                asigned = static_cast<bool>(msg->getU8());
             }
 
-            charmData.charms.emplace_back(charm);
+            if (asigned) {
+                charm.asignedStatus = true;
+                charm.raceId = msg->getU16();
+                charm.removeRuneCost = msg->getU32();
+            }
+        } else if (g_game.getClientVersion() < 1410) {
+            msg->getU8();
         }
 
+        charmData.charms.emplace_back(charm);
+    }
+
+    if (g_game.getClientVersion() >= 1410) {
+        charmData.availableCharmSlots = msg->getU8();
+    } else {
         msg->getU8();
+    }
 
-        const uint16_t finishedMonstersSize = msg->getU16();
-        for (auto i = 0; i < finishedMonstersSize; ++i) {
-            const uint16_t raceId = msg->getU16();
-            charmData.finishedMonsters.emplace_back(raceId);
+    const uint16_t finishedMonstersSize = msg->getU16();
+    charmData.finishedMonsters.reserve(finishedMonstersSize);
+
+    for (auto i = 0; i < finishedMonstersSize; ++i) {
+        uint32_t raceId;
+        if (g_game.getClientVersion() >= 1410) {
+            raceId = msg->getU32();
+        } else {
+            raceId = msg->getU16();
         }
+        charmData.finishedMonsters.emplace_back(raceId);
     }
 
     g_game.processUpdateBestiaryCharmsData(charmData);
@@ -3225,7 +3245,11 @@ void ProtocolGame::parsePlayerInventory(const InputMessagePtr& msg)
     for (auto i = 0; i < size; ++i) {
         msg->getU16(); // id
         msg->getU8(); // subtype
-        msg->getU16(); // count
+        if (g_game.getClientVersion() >= 1500) {
+            msg->getU8(); // count
+        } else {
+            msg->getU16(); // count
+        }
     }
 }
 
@@ -4042,6 +4066,31 @@ void ProtocolGame::parseLootContainers(const InputMessagePtr& msg)
     g_lua.callGlobalField("g_game", "onQuickLootContainers", quickLootFallbackToMainContainer, lootList);
 }
 
+void ProtocolGame::parseVirtue(const InputMessagePtr& msg) { // @note: improve name
+    const uint8_t subtype = msg->getU8();
+
+    switch (subtype) {
+        case 0x00: { // Harmony
+            const uint8_t harmonyValue = msg->getU8();
+            g_lua.callGlobalField("g_game", "onHarmonyProtocol", harmonyValue);
+            break;
+        }
+        case 0x01: { // Serene
+            const bool isSerene = msg->getU8() == 0x01;
+            g_lua.callGlobalField("g_game", "onSereneProtocol", isSerene);
+            break;
+        }
+        case 0x02: { // Virtue
+            const uint8_t virtueValue = msg->getU8();
+            g_lua.callGlobalField("g_game", "onVirtueProtocol", virtueValue);
+            break;
+        }
+        default:
+            g_logger.error(std::format("Unknown virtue subtype: %d", subtype));
+            break;
+    }
+}
+
 void ProtocolGame::parseCyclopediaHouseAuctionMessage(const InputMessagePtr& msg)
 {
     msg->getU32(); // houseId
@@ -4167,8 +4216,7 @@ void ProtocolGame::parseSupplyStash(const InputMessagePtr& msg)
         stashItems.push_back({ itemId, amount });
     }
 
-    auto version = g_game.getProtocolVersion();
-    if (version < 1412) {
+    if (g_game.getProtocolVersion() < 1410) {
         msg->getU16(); // free slots
     }
 
@@ -4215,21 +4263,27 @@ void ProtocolGame::parseImbuementDurations(const InputMessagePtr& msg)
     std::vector<ImbuementTrackerItem> itemList;
 
     for (auto i = 0; i < itemListCount; ++i) {
-        ImbuementTrackerItem item(msg->getU8());
+        ImbuementTrackerItem item(msg->getU8()); // slot
         item.item = getItem(msg);
 
         std::map<uint8_t, ImbuementSlot> slots;
 
         const uint8_t slotsCount = msg->getU8(); // total amount of imbuing slots on item
+        if (slotsCount == 0) {
+            continue;
+        }
+
         for (auto slotIndex = 0; slotIndex < slotsCount; ++slotIndex) {
             const bool slotImbued = static_cast<bool>(msg->getU8()); // 0 - empty, 1 - imbued
-            ImbuementSlot slot(slotIndex);
-            if (slotImbued) {
-                slot.name = msg->getString();
-                slot.iconId = msg->getU16();
-                slot.duration = msg->getU32();
-                slot.state = msg->getU8(); // 0 - paused, 1 - decaying
+            if (!slotImbued) {
+                continue;
             }
+
+            ImbuementSlot slot(slotIndex);
+            slot.name = msg->getString();
+            slot.iconId = msg->getU16();
+            slot.duration = msg->getU32();
+            slot.state = msg->getU8(); // 0 - paused, 1 - decaying
             slots.emplace(slotIndex, slot);
         }
 
@@ -4480,7 +4534,7 @@ void ProtocolGame::parseCyclopediaCharacterInfo(const InputMessagePtr& msg)
 
             std::vector<std::vector<uint16_t>> forgeSkillsArray;
 
-            if (g_game.getClientVersion() >= 1281) {
+            if (g_game.getFeature(Otc::GameForgeSkillStats)) {
                 // forge skill stats
                 const uint8_t lastSkill = g_game.getClientVersion() >= 1332 ? Otc::LastSkill : Otc::Momentum + 1;
                 for (uint16_t skill = Otc::Fatal; skill < lastSkill; ++skill) {
@@ -4808,9 +4862,157 @@ void ProtocolGame::parseCyclopediaCharacterInfo(const InputMessagePtr& msg)
             }
             break;
         }
+        case Otc::CYCLOPEDIA_CHARACTERINFO_OFFENCESTATS:
+        {
+            CyclopediaCharacterOffenceStats data;
+            data.critChance = msg->getDouble();
+            msg->getDouble(); // unused
+            msg->getDouble(); // unused
+            msg->getDouble(); // unused
+            msg->getDouble(); // unused
+
+            // Critical hit damage
+            data.critDamage = msg->getDouble();
+            data.critDamageBase = msg->getDouble();
+            data.critDamageImbuement = msg->getDouble();
+            data.critDamageWheel = msg->getDouble();
+            msg->getDouble(); // unused
+
+            // Life leech amount
+            data.lifeLeech = msg->getDouble();
+            data.lifeLeechBase = msg->getDouble();
+            data.lifeLeechImbuement = msg->getDouble();
+            data.lifeLeechWheel = msg->getDouble();
+            msg->getDouble(); // unused
+
+            // Mana leech amount
+            data.manaLeech = msg->getDouble();
+            data.manaLeechBase = msg->getDouble();
+            data.manaLeechImbuement = msg->getDouble();
+            data.manaLeechWheel = msg->getDouble();
+            msg->getDouble(); // unused
+
+            // Onslaught
+            data.onslaught = msg->getDouble();
+            data.onslaughtBase = msg->getDouble();
+            data.onslaughtBonus = msg->getDouble();
+            msg->getDouble(); // unused
+
+            data.cleavePercent = msg->getDouble();
+
+            // Perfect shot range
+            for (int i = 0; i < 5; i++) {
+                data.perfectShotDamage.push_back(msg->getU16());
+            }
+
+            data.flatDamage = msg->getU16();
+            data.flatDamageBase = msg->getU16();
+            msg->getU16(); // unused
+
+            data.weaponAttack = msg->getU16();
+            data.weaponFlatModifier = msg->getU16();
+            data.weaponDamage = msg->getU16();
+            data.weaponSkillType = msg->getU8();
+            data.weaponSkillLevel = msg->getU16();
+            data.weaponSkillModifier = msg->getU16();
+            data.weaponElement = msg->getU8();
+            data.weaponElementDamage = msg->getDouble();
+            data.weaponElementType = msg->getU8();
+
+            const uint8_t accuracyCount = msg->getU8();
+            for (int i = 0; i < accuracyCount; i++) {
+                msg->getU8(); // range
+                data.weaponAccuracy.push_back(msg->getDouble());
+            }
+
+            g_game.processCyclopediaCharacterOffenceStats(data);
+            break;
+        }
+        case Otc::CYCLOPEDIA_CHARACTERINFO_DEFENCESTATS:
+        {
+            CyclopediaCharacterDefenceStats data;
+
+            data.dodgeTotal = msg->getDouble();
+            data.dodgeBase = msg->getDouble();
+            data.dodgeBonus = msg->getDouble();
+            msg->getDouble(); // unused
+            data.dodgeWheel = msg->getDouble();
+
+            data.magicShieldCapacity = msg->getU32();
+            data.magicShieldCapacityFlat = msg->getU16();
+            data.magicShieldCapacityPercent = msg->getDouble();
+
+            data.reflectPhysical = msg->getU16();
+            data.armor = msg->getU16();
+            if (g_game.getClientVersion() >= 1500) {
+                msg->getU16();
+            }
+            data.defense = msg->getU16();
+            data.defenseEquipment = msg->getU16();
+            data.defenseSkillType = msg->getU8();
+            data.shieldingSkill = msg->getU16();
+            data.defenseWheel = msg->getU16();
+            msg->getU16(); // unused
+
+            data.mitigation = msg->getDouble();
+            data.mitigationBase = msg->getDouble();
+            data.mitigationEquipment = msg->getDouble();
+            data.mitigationShield = msg->getDouble();
+            data.mitigationWheel = msg->getDouble();
+            data.mitigationCombatTactics = msg->getDouble();
+            const uint8_t combatsCount = msg->getU8();
+            for (int i = 0; i < combatsCount; ++i) {
+                uint8_t elementType = msg->getU8();
+                if (elementType == 0x04) {
+                    CyclopediaCharacterDefenceStats::ElementalResistance resistance;
+                    resistance.element = msg->getU8();
+                    resistance.value = msg->getDouble();
+                    data.resistances.push_back(resistance);
+                }
+            }
+
+            g_game.processCyclopediaCharacterDefenceStats(data);
+            break;
+        }
+        case Otc::CYCLOPEDIA_CHARACTERINFO_MISCSTATS:
+        {
+            CyclopediaCharacterMiscStats data;
+
+            data.momentumTotal = msg->getDouble();
+            data.momentumBase = msg->getDouble();
+            data.momentumBonus = msg->getDouble();
+            data.momentumWheel = msg->getDouble();
+            msg->getDouble(); // unused
+
+            data.dodgeTotal = msg->getDouble();
+            data.dodgeBase = msg->getDouble();
+            data.dodgeBonus = msg->getDouble();
+            data.dodgeWheel = msg->getDouble();
+
+            data.damageReflectionTotal = msg->getDouble();
+            data.damageReflectionBase = msg->getDouble();
+            data.damageReflectionBonus = msg->getDouble();
+
+            data.haveBlesses = msg->getU8();
+            data.totalBlesses = msg->getU8();
+
+            const uint8_t concoctionsCount = msg->getU8();
+            for (int i = 0; i < concoctionsCount; ++i) {
+                CyclopediaCharacterMiscStats::Concoction concoction;
+                concoction.id = msg->getU16();
+                msg->getU8(); // unused
+                msg->getU8(); // unused
+                concoction.duration = msg->getU32();
+                data.concoctions.push_back(concoction);
+            }
+
+            msg->getU8(); // unused
+
+            g_game.processCyclopediaCharacterMiscStats(data);
+            break;
+        }
     }
 }
-
 void ProtocolGame::parseDailyRewardCollectionState(const InputMessagePtr& msg)
 {
     const uint8_t state = msg->getU8();
@@ -5280,6 +5482,9 @@ void ProtocolGame::parseMarketDetail(const InputMessagePtr& msg)
     }
 
     if (g_game.getClientVersion() >= 1282) {
+        lastAttribute = Otc::ITEM_DESC_CURRENTTIER;
+    }
+    if (g_game.getClientVersion() >= 1500) {
         lastAttribute = Otc::ITEM_DESC_LAST;
     }
 

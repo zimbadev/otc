@@ -42,6 +42,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Client
 # *****************************************************************************
 if (MSVC)
+	include_directories(${PROJECT_SOURCE_DIR}/src/framework/core)
 	add_executable(${PROJECT_NAME} "" ../cmake/icon/otcicon.rc)
 elseif(ANDROID)
 	add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
@@ -74,6 +75,11 @@ endif()
 if (ANDROID OR WASM)
 	set(FRAMEWORK_DEFINITIONS ${FRAMEWORK_DEFINITIONS} -DOPENGL_ES=2)
 endif()
+
+target_include_directories(${PROJECT_NAME}
+    PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/framework/core
+)
 
 # Set for use precompiled header
 if(TOGGLE_PRE_COMPILED_HEADER)
@@ -174,6 +180,12 @@ message(STATUS "Build commit: ${BUILD_COMMIT}")
 add_definitions(-D"BUILD_COMMIT=\\\"${BUILD_COMMIT}\\\"")
 message(STATUS "Build revision: ${BUILD_REVISION}")
 add_definitions(-D"BUILD_REVISION=\\\"${BUILD_REVISION}\\\"")
+
+# --- Git build info (manual fallback if gitinfo.h is missing) ---
+add_definitions(-DGIT_COMMITS=1234)
+add_definitions(-DGIT_VERSION="1.0.0")
+add_definitions(-DGIT_BRANCH="dev")
+
 
 # *****************************************************************************
 # Packages / Libs

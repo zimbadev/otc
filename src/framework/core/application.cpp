@@ -34,7 +34,7 @@
 #include <framework/proxy/proxy.h>
 
 #include <csignal>
-#include <gitinfo.h>
+// #include <gitinfo.h>
 
 #define ADD_QUOTES_HELPER(s) #s
 #define ADD_QUOTES(s) ADD_QUOTES_HELPER(s)
@@ -224,9 +224,15 @@ std::string Application::getOs()
 // https://stackoverflow.com/a/46448040
 std::string Application::getBuildRevision()
 {
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(3) << (static_cast<float>(GIT_COMMITS) / 1000);
-    return ss.str();
+    return "0.000";
 }
-std::string Application::getVersion() { return ADD_QUOTES(GIT_VERSION); }
-std::string Application::getBuildCommit() { return ADD_QUOTES(GIT_BRANCH); }
+
+std::string Application::getVersion()
+{
+    return "1.0.0"; 
+}
+
+std::string Application::getBuildCommit()
+{
+    return "CrystalServer"; 
+}

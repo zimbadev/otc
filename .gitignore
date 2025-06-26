@@ -24,7 +24,6 @@ static/
 [Oo]bj/
 cmake-build-*/
 vcpkg_installed/
-vc17/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/

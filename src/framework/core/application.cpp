@@ -224,15 +224,15 @@ std::string Application::getOs()
 // https://stackoverflow.com/a/46448040
 std::string Application::getBuildRevision()
 {
-    return "0.000"; // lub cokolwiek, np. "dev"
+    return "0.000";
 }
 
 std::string Application::getVersion()
 {
-    return "1.0.0"; // lub po prostu użyj VERSION z CMake
+    return "1.0.0"; 
 }
 
 std::string Application::getBuildCommit()
 {
-    return "CrystalServer"; // np. "main", "local", cokolwiek
+    return "CrystalServer"; 
 }

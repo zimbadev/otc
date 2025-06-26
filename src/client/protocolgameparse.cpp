@@ -24,7 +24,7 @@
 
 #include "effect.h"
 #include "framework/net/inputmessage.h"
-
+#include <fmt/core.h>
 #include "attachedeffectmanager.h"
 #include "item.h"
 #include "localplayer.h"
@@ -4086,7 +4086,7 @@ void ProtocolGame::parseVirtue(const InputMessagePtr& msg) { // @note: improve n
             break;
         }
         default:
-            g_logger.error(std::format("Unknown virtue subtype: %d", subtype));
+            g_logger.error(fmt::format("Unknown virtue subtype: {}", subtype));
             break;
     }
 }

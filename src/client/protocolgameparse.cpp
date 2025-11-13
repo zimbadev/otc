@@ -35,6 +35,7 @@
 #include "tile.h"
 #include <ctime>
 #include <framework/core/eventdispatcher.h>
+#include <array>
 
 void ProtocolGame::parseMessage(const InputMessagePtr& msg)
 {
@@ -605,7 +606,62 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
                     parseCompleteStorePurchase(msg);
                     break;
                 default:
-                    throw Exception("unhandled opcode {}", opcode);
+                    g_logger.error(
+                        "unhandled opcode 0x{:02X}, prev=0x{:02X}, msgSize={}, readPos={}, unread={}",
+                        opcode,
+                        prevOpcode == -1 ? 0 : prevOpcode,
+                        msg->getMessageSize(),
+                        msg->getReadPos(),
+                        msg->getUnreadSize()
+                    );
+                    {
+                        const auto& buf = msg->getBuffer();
+                        const size_t start = msg->getReadPos();
+                        std::string hex;
+                        hex.reserve((buf.size() - start) * 2);
+                        for (size_t i = start; i < buf.size(); ++i) {
+                            hex += fmt::format("{:02X}", static_cast<unsigned char>(buf[i]));
+                        }
+                        std::ofstream packet("packet.log", std::ios::app);
+                        if (packet.is_open()) {
+                            packet << fmt::format(
+                                "UNHANDLED opcode=0x{:02X} prev=0x{:02X} readPos={} unread={} msgSize={}\n",
+                                opcode,
+                                prevOpcode == -1 ? 0 : prevOpcode,
+                                msg->getReadPos(),
+                                msg->getUnreadSize(),
+                                msg->getMessageSize()
+                            );
+                            packet << fmt::format("UNREAD_HEX {}\n", hex);
+                        }
+                    }
+                    {
+                        static const std::array<uint8_t, 32> candidates = {
+                            0x6B, 0x6D, 0x69, 0x70, 0x71, 0x72,
+                            0x1D, 0x1E, 0x29, 0x2A, 0x2B, 0x28,
+                            0x90, 0x91, 0x92, 0x93, 0x94, 0x95,
+                            0xA9, 0xAB, 0xAC, 0xEE, 0xDA, 0xF9,
+                            0xF5, 0xC3, 0xC6, 0xC7, 0xA1, 0xA2,
+                            0x8C, 0x8D
+                        };
+                        const auto& buf = msg->getBuffer();
+                        const size_t start = msg->getReadPos();
+                        size_t next = buf.size();
+                        for (size_t i = start; i < buf.size(); ++i) {
+                            const uint8_t b = static_cast<uint8_t>(buf[i]);
+                            for (const auto c : candidates) {
+                                if (b == c) { next = i; break; }
+                            }
+                            if (next != buf.size()) break;
+                        }
+                        if (next > start && next < buf.size()) {
+                            const size_t skip = next - start;
+                            msg->skipBytes(static_cast<uint16_t>(skip));
+                        } else {
+                            msg->skipBytes(static_cast<uint16_t>(msg->getUnreadSize()));
+                        }
+                    }
+                    break;
             }
             prevOpcode = opcode;
         }
@@ -3241,15 +3297,26 @@ void ProtocolGame::parseItemInfo(const InputMessagePtr& msg) const
 
 void ProtocolGame::parsePlayerInventory(const InputMessagePtr& msg)
 {
-    const uint16_t size = msg->getU16();
-    for (auto i = 0; i < size; ++i) {
-        msg->getU16(); // id
-        msg->getU8(); // subtype
-        if (g_game.getClientVersion() >= 1500) {
-            msg->getU8(); // count
+    const uint16_t total = msg->getU16();
+    for (uint16_t i = 0; i < total; ++i) {
+        const uint16_t itemId = msg->getU16();
+        const uint8_t tier = msg->getU8();
+
+        const uint8_t first = msg->getU8();
+        uint32_t count = 0;
+        if (first < 64) {
+            count = first;
+        } else if (first < 128) {
+            const uint8_t low = msg->getU8();
+            count = (static_cast<uint32_t>(first - 64) << 8) | low;
         } else {
-            msg->getU16(); // count
+            const uint8_t b2 = msg->getU8();
+            const uint8_t b3 = msg->getU8();
+            const uint8_t b4 = msg->getU8();
+            count = (static_cast<uint32_t>(b2) << 16) | (static_cast<uint32_t>(b3) << 8) | static_cast<uint32_t>(b4);
         }
+
+        g_lua.callGlobalField("g_game", "onInventoryItem", itemId, tier, count);
     }
 }
 
@@ -3296,6 +3363,7 @@ void ProtocolGame::parseExtendedOpcode(const InputMessagePtr& msg)
 {
     const uint8_t opcode = msg->getU8();
     const auto& buffer = msg->getString();
+    g_logger.debug("extended opcode {} (len {})", opcode, buffer.size());
 
     if (opcode == 0) {
         m_enableSendExtendedOpcode = true;

@@ -148,7 +148,13 @@ return {
     displayHarmony                       = {
         value = true,
         action = function(value, options, controller, panels, extraWidgets)
-            panels.gameMapPanel:setDrawHarmony(value)
+            local map = panels and panels.gameMapPanel
+            if map and map.setDrawHarmony then
+                map:setDrawHarmony(value)
+            else
+                -- Graceful fallback when running a build without setDrawHarmony bound
+                -- Avoid crashing; keep option value for future sessions where the feature exists
+            end
         end
     },
     displayText                       = {

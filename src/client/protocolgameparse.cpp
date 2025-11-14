@@ -2267,13 +2267,11 @@ void ProtocolGame::parsePlayerStats(const InputMessagePtr& msg) const
 
 void ProtocolGame::parsePlayerSkills(const InputMessagePtr& msg) const
 {
-    const int version = g_game.getClientVersion();
-
-    if (version >= 1281) {
+    if (g_game.getClientVersion() >= 1281) {
         // magic level
         const uint16_t magicLevel = msg->getU16();
         const uint16_t baseMagicLevel = msg->getU16();
-        msg->getU16(); // loyalty bonus
+        msg->getU16(); // base + loyalty bonus(?)
         const uint8_t percent = msg->getU16() / 100;
 
         m_localPlayer->setMagicLevel(magicLevel, percent);
@@ -2291,8 +2289,9 @@ void ProtocolGame::parsePlayerSkills(const InputMessagePtr& msg) const
         }
 
         uint16_t levelPercent = 0;
-        if (version >= 1281) {
-            msg->getU16(); // loyalty
+
+        if (g_game.getClientVersion() >= 1281) {
+            msg->getU16(); // base + loyalty bonus(?)
             levelPercent = msg->getU16() / 100;
         } else {
             levelPercent = msg->getU8();
@@ -2302,7 +2301,7 @@ void ProtocolGame::parsePlayerSkills(const InputMessagePtr& msg) const
         m_localPlayer->setBaseSkill(static_cast<Otc::Skill>(skill), baseLevel);
     }
 
-    if (g_game.getFeature(Otc::GameAdditionalSkills) && version < 1412) {
+    if (g_game.getFeature(Otc::GameAdditionalSkills)) {
         // Critical, Life Leech, Mana Leech
         for (int_fast32_t skill = Otc::CriticalChance; skill <= Otc::ManaLeechAmount; ++skill) {
             if (!g_game.getFeature(Otc::GameLeechAmount)) {
@@ -2322,9 +2321,8 @@ void ProtocolGame::parsePlayerSkills(const InputMessagePtr& msg) const
         msg->getU8();
     }
 
-    if (version >= 1281 && version < 1412) {
-        // forge skill stats (pre-14.12)
-        const uint8_t lastSkill = version >= 1332 ? Otc::LastSkill : Otc::Momentum + 1;
+    if (g_game.getFeature(Otc::GameForgeSkillStats)) {
+        const uint8_t lastSkill = g_game.getClientVersion() >= 1332 ? Otc::LastSkill : Otc::Momentum + 1;
         for (int_fast32_t skill = Otc::Fatal; skill < lastSkill; ++skill) {
             const uint16_t level = msg->getU16();
             const uint16_t baseLevel = msg->getU16();
@@ -2335,11 +2333,11 @@ void ProtocolGame::parsePlayerSkills(const InputMessagePtr& msg) const
         // bonus cap
         const uint32_t capacity = msg->getU32(); // base + bonus capacity
         msg->getU32(); // base capacity
-        m_localPlayer->setTotalCapacity(capacity);
 
+        m_localPlayer->setTotalCapacity(capacity);
     }
-    
-    if (version >= 1412) {
+
+    if (g_game.getFeature(Otc::GameCharacterSkillStats)) {
         //msg->getU8(); //  GameConcotions ??
         const uint32_t capacity = msg->getU32(); // base + bonus capacity
         msg->getU32(); // base capacity
@@ -4072,12 +4070,12 @@ void ProtocolGame::parseVirtue(const InputMessagePtr& msg) { // @note: improve n
     switch (subtype) {
         case 0x00: { // Harmony
             const uint8_t harmonyValue = msg->getU8();
-            g_lua.callGlobalField("g_game", "onHarmonyProtocol", harmonyValue);
+            m_localPlayer->setHarmony(harmonyValue);
             break;
         }
         case 0x01: { // Serene
             const bool isSerene = msg->getU8() == 0x01;
-            g_lua.callGlobalField("g_game", "onSereneProtocol", isSerene);
+            m_localPlayer->setSerene(isSerene);
             break;
         }
         case 0x02: { // Virtue
@@ -4086,7 +4084,7 @@ void ProtocolGame::parseVirtue(const InputMessagePtr& msg) { // @note: improve n
             break;
         }
         default:
-            g_logger.error(fmt::format("Unknown virtue subtype: {}", subtype));
+            g_logger.error("Unknown virtue subtype: {}", subtype);
             break;
     }
 }

@@ -13,7 +13,7 @@ Services = {
 Servers_init = {
     ["http://127.0.0.1/login.php"] = {
         ["port"] = 80,
-        ["protocol"] = 1503,
+        ["protocol"] = 1511,
         ["httpLogin"] = true
     },--[[
     ["ip.net"] = {

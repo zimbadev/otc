@@ -216,9 +216,10 @@ GameAllowCustomBotScripts = 120
 GameColorizedLootValue = 121
 GameAllowPreWalk = 122
 GamePlayerFamiliars = 123
-GameLatencyAdaptiveCamera = 124
+-- = 124
 GameMapCache = 125
 GameForgeSkillStats = 126
+GameCharacterSkillStats = 127
 
 TextColors = {
     red = '#f55e5e',    -- '#c83200'
@@ -434,7 +435,6 @@ ResourceTypes = {
     REGULAR_GEMS = 82,
     GREATER_GEMS = 83,
     WHEEL_OF_DESTINY = 86,
-    TASK_HUNTING = 50,
     COIN_NORMAL = 90,
     COIN_TRANSFERRABLE = 91,
     COIN_AUCTION = 92,
@@ -461,7 +461,7 @@ CyclopediaCharacterInfoTypes = {
 }
 
 StoreConst = {
-   InstantRewardAccess = 233,
+    InstantRewardAccess = 233,
 }
 
 ExperienceRate = {
@@ -472,4 +472,11 @@ ExperienceRate = {
     STAMINA_MULTIPLIER = 4
 }
 
+ExperienceRate = {
+    BASE = 0,
+    VOUCHER = 1,
+    LOW_LEVEL = 2,
+    XP_BOOST = 3,
+    STAMINA_MULTIPLIER = 4
+}
 -- @}

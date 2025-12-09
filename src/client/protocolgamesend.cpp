@@ -140,9 +140,9 @@ void ProtocolGame::sendLogout()
 
 void ProtocolGame::sendPing()
 {
-    if (g_game.getFeature(Otc::GameExtendedClientPing))
+    if (g_game.getFeature(Otc::GameExtendedClientPing) && m_enableSendExtendedOpcode) {
         sendExtendedOpcode(2, "");
-    else {
+    } else {
         const auto& msg = std::make_shared<OutputMessage>();
         msg->addU8(Proto::ClientPing);
         Protocol::send(msg);
